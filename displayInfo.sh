@@ -7,22 +7,41 @@
 #  will display the info corresponding to arg1
 #  otherwise all info is displayed , by default.
 #
+#--------------------------------
+# Node1: local servers
 export dmgr="dmgr"
 export node="nodeagent"
 export dc="Node01-DCServer"
 export ds="Node01-DSServer"
 export res="RulesMgrSrv"
 
+# Node2: remote servers
+export node2="nodeagent"
+export dc2="Node02-DCServer"
+export ds2="Node02-DSServer"
+
 function display_info()
 {
 hostName=$(hostname -f) 
 IPaddr=$(hostname -i)
-echo "Hostname: $hostName  IPaddr: $IPaddr"
+
+if   [ $HOSTNAME == "odm1" ] ;  then   remoteNodeHostName="odm"
+elif [ $HOSTNAME == "odm"  ] ;  then   remoteNodeHostName="odm1" ; fi
+echo "Cell/dmgr Node01 hostname: $hostName  IPaddr: $IPaddr"
+
 declare -a cluster=( $dc $ds $res $node $dmgr )
- echo "cluster contains servers:"
+ echo "cluster contains local servers:"
  for server in ${cluster[@]}; do
    echo " $server"
  done
+echo ""
+
+declare -a cluster1=( $dc2 $ds2 $node2)
+ echo "cluster contains remote servers on hostname: $remoteNodeHostName"
+ for server in ${cluster1[@]}; do
+   echo " $server"
+ done
+
 echo ""
 }
 
@@ -46,7 +65,7 @@ echo "--ODM$ver WAS9 Server URLs--"
 echo "ODM DC:      https://$HOSTNAME:9445/decisioncenter"
 echo "ODM DC-API:  https://$HOSTNAME:9445/decisioncenter-api/swagger-ui.html"
 echo "ODM RES:     https://$HOSTNAME:9444/res/login.jsf"
-echo "ODM DR:      https://$HOSTNAME:9444/DecisionRunner"
+echo "ODM DR:      https://$HOSTNAME:9443/DecisionRunner"
 echo "WAS Admin:   https://$HOSTNAME:9043/ibm/console"
 echo "               user/pw: admin/admin"
 echo ""
@@ -54,7 +73,7 @@ echo ""
 
 function display_logs()
 {
-echo "--To view ODM$ver WAS9 ND server logs--"
+echo "--To view ODM$ver WAS9 ND local server logs--"
 echo "DC,  run: tail"$ver"WAS9dc"
 echo "DS,  run: tail"$ver"WAS9ds"
 echo "RES, run: tail"$ver"WAS9res"
@@ -74,8 +93,8 @@ function display_wlp()
 {
  echo "_______________________________________________"
  echo ""
- echo "--ODM 8110  Liberty sample server cmds:  "
- echo "     start8110, stop8110, restart8110, tail8110  "
+ echo "--ODM 81051 Liberty sample server cmds:  "
+ echo "     start81051, stop81051, restart81051, tail81051 "
  echo "_______________________________________________"
 }
 

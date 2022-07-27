@@ -3,12 +3,13 @@
 #------------------------------
 #
 # manageODMclusterWAS9.sh <cmd> [server] 
-#  usge: run, manageODMclusterWAS9
+#  usage: run, manageODMclusterWAS9
 # --------------------------------
 #
 export ver
-if   [ $HOSTNAME == "odm1" ] ;  then   ver="8110"
-elif [ $HOSTNAME == "odm"  ] ;  then   ver="81051" ; fi
+export remoteNodeHostName
+if   [ $HOSTNAME == "odm1" ] ;  then   ver="8110"  ; remoteNodeHostName="odm"
+elif [ $HOSTNAME == "odm"  ] ;  then   ver="81051" ; remoteNodeHostName="odm1" ; fi
 
 # paths 
 export WAS_HOME=/opt/IBM/WAS9/AppServer
@@ -35,6 +36,7 @@ export node="nodeagent"
 export dc="Node01-DCServer"
 export ds="Node01-DSServer"
 export res="RulesMgrSrv"
+
 creds="-username admin -password admin " 
 NULL=/dev/null
 force=""     
@@ -100,6 +102,7 @@ function stopServer()
     fi
    fi
 }
+ 
 
 function serverStatus()
 {
@@ -126,12 +129,19 @@ function startCluster()
   if [[ ! "$server" ]] ; then
    echo "Starting cluster, please wait ..."
    declare -a cluster=( $dmgr $node $dc $ds $res )
+   echo "Starting local servers on Node01 on hostname: $HOSTNAME ..."
    for server in ${cluster[@]}; do
-     startServer  $server
+     startServer  $server   
    done
-   echo "Cluster started."
-   unset server 
-   displayInfo.sh 
+
+  # start remote node2 servers 
+  echo "Starting remote servers oa Node02 on hostname: $remoteNodeHostName ..."
+
+  ssh $remoteNodeHostName startNode2_all.sh > $NULL  
+
+  echo "Cluster started." 
+  unset server 
+  displayInfo.sh 
  else
   force=true
   startServer $server
@@ -148,10 +158,15 @@ function stopCluster()
  if [[ ! "$server" ]] ; then
   echo "Stopping cluster, please wait ..."
   declare -a cluster=( $res $ds $dc $node $dmgr )
+  # stop local servers
   for server in ${cluster[@]}; do
-    stopServer $server
+    stopServer $server 
   done
-  echo "Cluster stopped."
+
+  # stop remote node2 servers
+  ssh $remoteNodeHostName stopNode2_all.sh 
+
+  echo "Cluster stop initiated, may take awhile before all JVMs have stopped"
   unset server
  else
   force=true
@@ -162,26 +177,27 @@ function stopCluster()
 function clusterStatus()
 {
  if [[ ! "$server" ]] ; then
-  echo "Getting cluster status ..."
+  echo ""
+  echo "Status of Node01 local servers on hostname: $HOSTNAME" 
+  echo "---------------------------------------------"
+
   declare -a cluster=( $dc $res $ds $node $dmgr )
   for server in ${cluster[@]}; do
     serverStatus $server
   done
+  echo ""
+ # get remote node2 status 
+  echo "Status of Node02 remote servers on hostname: $remoteNodeHostName "
+  echo "---------------------------------------------"
+  ssh $remoteNodeHostName serverStatusNode2_all.sh 
  else
    echo "Getting $server status ..." 
    serverStatus $server
  fi
 }
 
-
 #--------- main --------------
 #
-# shopt -s nullglob
-# if [ ! $WAS_NODE01/* ]; then
-#   echo "Cluster does not exist, run createODMclusterWAS9.sh to create cluster"
-#   exit
-# fi
-
 if [[ $2 ]] ; then
  case $2 in
    dmgr) server=$dmgr ;;
@@ -203,7 +219,7 @@ if [[ $3 == "force" ]]; then force=true ; fi
 case $1 in
     start)   startCluster ;; 
     stop)    stopCluster ;;   
-    restart) stopCluster ; startCluster ;; 
+    restart) stopCluster ; startCluster ;;
     status)  clusterStatus ;;
     info)    displayInfo.sh ;;
     help)    displayInfo.sh cmd ; exit  ;;
