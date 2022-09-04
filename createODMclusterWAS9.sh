@@ -13,8 +13,11 @@ if [ -z "$1" ] ; then
  echo " version={8110, 81051} "
  exit 
 elif [ -z "$2" ] ; then
- echo "only local cluster member specified " 
- localOnly=true
+ echo "cluster requires Node02 remote hostname" 
+ echo "usage: createODMclusterWAS.sh <version> <remoteHostname>"
+ echo " version={8110, 81051} "
+ exit
+ # localOnly=true
 else
   remoteHostName=$2
   remoteHost=$(ssh $remoteHostName hostname)
@@ -111,28 +114,41 @@ function validateDB()
 
 function deleteLocalProfiles()
 {
- manageODMclusterWAS9.sh  stop
+ echo "Deleting local profiles and clusters ... "
  $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry
- echo "Deleting profiles and clusters ... "
+ echo "Deleting profileName: $node01ProfileName ... "
  $WAS_HOME/bin/manageprofiles.sh -delete -profileName $node01ProfileName
+ echo "Deleting profileName:  $dmgrProfileName... "
  $WAS_HOME/bin/manageprofiles.sh -delete -profileName $dmgrProfileName
+ echo "running cmd: $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry"
  $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry
+ echo "removing folder $WAS_NODE01  $WAS_DMGR01"
  rm -rf $WAS_NODE01 
  rm -rf $WAS_DMGR01
 }
 
 function deleteRemoteProfiles()
 {
- # manageODMclusterWAS9.sh  stop
- # $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry
-  echo "Deleting remote profiles ... need to implement "
- # $WAS_HOME/bin/manageprofiles.sh -delete -profileName $node02ProfileName
- # $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry
- # rm -rf $WAS_NODE02
+if [ $localOnly == "false" ] ; then
+ echo "Deleting remote profile on host: $remoteHostName... "
+ cmd="$WAS_HOME/bin/manageprofiles.sh -delete -profileName $node02ProfileName"
+ echo "Running cmd: ssh $remoteHostName $cmd" 
+ ssh $remoteHostName $cmd 
+
+ cmd="$WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry"
+ echo "Running cmd: ssh $remoteHostName $cmd" 
+ ssh $remoteHostName $cmd
+
+ cmd="rm -rf $WAS_NODE02"
+ echo "Running cmd: ssh $remoteHostName $cmd" 
+ ssh $remoteHostName $cmd
+ echo "Completed removal of remote profile $node02ProfileName  on host: $remoteHostName... "
+fi
 }
 
 function deleteExistingProfiles()
 {
+ manageODMclusterWAS9.sh  stop
  deleteLocalProfiles
  deleteRemoteProfiles
 }

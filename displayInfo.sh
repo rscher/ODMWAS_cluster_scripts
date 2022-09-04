@@ -8,28 +8,35 @@
 #  otherwise all info is displayed , by default.
 #
 #--------------------------------
-# Node1: local servers
+# Node1: local servers 
+# ODMMachine01 profile
 export dmgr="dmgr"
-export node="nodeagent"
-export dc="Node01-DCServer"
-export ds="Node01-DSServer"
+export node1="nodeagent"
+export dc1="Node01-DCServer"
+export ds1="Node01-DSServer"
 export res="RulesMgrSrv"
 
 # Node2: remote servers
+# ODMMachine01 profile
 export node2="nodeagent"
 export dc2="Node02-DCServer"
 export ds2="Node02-DSServer"
 
 function display_info()
 {
-hostName=$(hostname -f) 
-IPaddr=$(hostname -i)
 
 if   [ $HOSTNAME == "odm1" ] ;  then   remoteNodeHostName="odm"
 elif [ $HOSTNAME == "odm"  ] ;  then   remoteNodeHostName="odm1" ; fi
-echo "Cell/dmgr Node01 hostname: $hostName  IPaddr: $IPaddr"
 
-declare -a cluster=( $dc $ds $res $node $dmgr )
+hostName=$(hostname -f)
+IPaddr=$(hostname -i)
+remoteHostFQDN=$(ssh $remoteNodeHostName hostname -f)
+remoteHostIPaddr=$(ssh $remoteNodeHostName hostname -i)
+
+echo "Cell/dmgr Node1 hostname: $hostName  IPaddr: $IPaddr"
+echo "   remote Node2 hostname:  $remoteHostFQDN  IPaddr: $remoteHostIPaddr"
+
+declare -a cluster=( $dc1 $ds1 $res $node1 $dmgr )
  echo "cluster contains local servers:"
  for server in ${cluster[@]}; do
    echo " $server"
@@ -41,22 +48,32 @@ declare -a cluster1=( $dc2 $ds2 $node2)
  for server in ${cluster1[@]}; do
    echo " $server"
  done
-
-echo ""
+ echo ""
 }
 
 function display_cmd()
 {
-echo "-- ODM$ver WAS9 ND cluster cmds --"
+#  echo "-- ODM$ver WAS9 ND cluster cmds --"
  echo "Usage: manageODMclusterWAS9 arg1 [arg2]"
- echo "arg1=action <start,stop,restart,status, info, help>"
- echo "arg2=server <dc,res,ds,dmgr,node>"
- echo " if arg2 entered,action is taken on specified server"
- echo " otherwise action applies to all servers in cluster"
+ echo "" 
+ echo "arg1: cluster-scoped cmds <startDS, stopDS, startDC, stopDC>"
+ echo "      *most commonly used "
+ echo "      cluster-wide cmds <start,stop,restart,status, info, help>"
+ echo ""
+ echo "arg2: server-scoped cmds <dc1,dc2,ds1,ds2,res,node1,node2,dmgr>"
+ echo "     *limits the scope of cluster-wide cmds to a specified server"
+ echo "      useful for starting/stopping nodeagent on node1 or node2"
+ echo "      or getting status for a specific server"
+ echo ""
  echo "examples:"
- echo "'manageODMclusterWAS9 restart' will restart entire cluster"
- echo "'manageODMclusterWAS9 restart dc' will restart DCServer only "
-echo ""
+ echo "'manageODMclusterWAS9 startDS'     starts DS cluster on Node01 and Node02"
+ echo "'manageODMclusterWAS9 start'       start all servers (entire cluster) on both nodes"
+ echo "'manageODMclusterWAS9 status'      displays status of all servers (entire cluster)"
+ echo "'manageODMclusterWAS9 stop dc1'    stops DC server on Node01"
+ echo "'manageODMclusterWAS9 start node2' starts nodeagent on Node02"
+ echo "'manageODMclusterWAS9 status ds2 ' displays status of DS on Node02"
+ echo ""
+ echo "run 'manageODMclusterWAS9 info' for detailed cluster info and cmd options"
 }
 
 function display_urls()
@@ -74,11 +91,14 @@ echo ""
 function display_logs()
 {
 echo "--To view ODM$ver WAS9 ND local server logs--"
-echo "DC,  run: tail"$ver"WAS9dc"
-echo "DS,  run: tail"$ver"WAS9ds"
-echo "RES, run: tail"$ver"WAS9res"
-echo "Dmgr,run: tailWAS9dmgr"
-echo "Node,run: tailWAS9node"
+echo "DC1,   run: tail"$ver"WAS9dc1"
+echo "DC2,   run: tail"$ver"WAS9dc2"
+echo "DS1,   run: tail"$ver"WAS9ds1"
+echo "DS2,   run: tail"$ver"WAS9ds2"
+echo "RES,   run: tail"$ver"WAS9res"
+echo "Dmgr,  run: tailWAS9dmgr"
+echo "Node1, run: tailWAS9node1"
+echo "Node2, run: tailWAS9node2"
 }
 
 function display_cmd2()
