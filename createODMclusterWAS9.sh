@@ -1,5 +1,8 @@
 #!/bin/bash
-#
+# 
+# Desc: Automates procedure to create  2-node WAS ND ODM DC and DS Cluster
+#  ref:   ibm.com/docs/en/odm/8.11.0?topic=server-configuring-clustered-environment
+# 
 # createODMclusterWAS.sh <version> <remoteHostname> 
 #
 # version = {8110, 81051}
