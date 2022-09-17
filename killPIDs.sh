@@ -14,7 +14,7 @@ fi
 
 pids=$( ps -ef | grep $1  | gawk '{ print $2 }'  )
 if [[ $pids ]] ; then 
- echo "killing pids all pids containing $1 in $delay, CNTL-C now to abort."
+ echo "killing pids pids containing $1 in $delay, CNTL-C now to abort."
  echo ""
  sleep $delay 
  for pid in $pids ;  do
