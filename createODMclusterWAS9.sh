@@ -9,6 +9,7 @@
 # remoteHostname = hostname (or IP) of remote Node02
 # --------------------------------
 
+export SOAPport=8879
 export localOnly
 
 if [ -z "$1" ] ; then
@@ -37,9 +38,6 @@ fi
  
 export ver=$1
 
-# if   [ $HOSTNAME == "odm1" ] ;  then   ver="8110"
-# elif [ $HOSTNAME == "odm"  ] ;  then   ver="81051" ; fi
-
 # paths 
 export WAS_HOME=/opt/IBM/WAS9/AppServer
 export ODM_HOME=/opt/IBM/ODM$ver
@@ -51,7 +49,6 @@ export WAS_DMGR01=$WAS_PROFILE/$dmgrProfileName
 export WAS_NODE01=$WAS_PROFILE/$node01ProfileName
 export WAS_NODE02=$WAS_PROFILE/$node02ProfileName
 
-SOAPport=8879 
 creds="-username admin -password admin"
 creds1="-adminUsername admin -adminPassword admin"
 creds2="-adminUserName admin -adminPassword admin"
@@ -88,7 +85,12 @@ function validateDB()
 {
  if [ -f $DSClusterPropfile ] ; then parseDSpropertiesFile ; else echo "$DSClusterPropfile not found, aborting" ; exit  ; fi
  if [ -f $DCClusterPropfile ] ; then parseDCpropertiesFile ; else echo "$DCClusterPropfile not found, aborting" ; exit  ; fi
- 
+
+  if [[ $dcdbType != "DB2" ]] || [[ $resdbType != "DB2" ]]  ; then
+     echo "only DB2 database can be validated"
+    exit
+  fi
+
  if [ $dcdbName ] ; then
   source ~db2inst1/.bashrc
   db2start
@@ -151,16 +153,16 @@ fi
 
 function deleteExistingProfiles()
 {
- manageODMclusterWAS9.sh  stop
+ manageODMclusterWAS9.sh  stop force
  deleteLocalProfiles
- deleteRemoteProfiles
+#  deleteRemoteProfiles
 }
 
 #----- main ----------
 #
  validateDB
  deleteExistingProfiles
- 
+
 # uncomment next 2 lines for WAS 855
 # $WAS_HOME/bin/managesdk.sh    -setCommandDefault    -sdkname 1.8_64_bundled
 # $WAS_HOME/bin/managesdk.sh    -setNewProfileDefault -sdkname 1.8_64_bundled
