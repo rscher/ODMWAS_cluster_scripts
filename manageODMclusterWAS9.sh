@@ -323,7 +323,7 @@ if [[ $2 ]] ; then
   force)  force=true ;;
    *)
       echo "$2 server not found in cluster"
-      echo "choose from: res, dc1,dc2,ds1,ds2, dmgr,node1,node"
+      echo "choose from: res, dc1,dc2,ds1,ds2, dmgr,node1,node2"
       echo "or leave blank for all servers in cluster"
       exit ;;
   esac
