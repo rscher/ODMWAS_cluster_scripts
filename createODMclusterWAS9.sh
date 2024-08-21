@@ -9,7 +9,7 @@ export localOnly
 
 if [ -z "$1" ] ; then
  localOnly=true
- echo "only local cluster cluster member will created" 
+ echo "only local cluster cluster member will be created" 
 else
   remoteHostName=$1
   remoteHost=$(ssh $remoteHostName hostname)
