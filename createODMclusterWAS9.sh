@@ -53,7 +53,7 @@ sed -i "s/-Xms256m -Xmx256m -Xj9/-Xms256m -Xmx4096m -Xj9/g" $WAS_HOME/bin/launch
 echo "Creating $dmgrProfileName, log: $WAS_HOME/logs/manageprofiles/Dmgr01_create.log"
 $WAS_HOME/bin/manageprofiles.sh -create -profileName $dmgrProfileName -profilePath $WAS_DMGR01  -templatePath $WAS_HOME/profileTemplates/management -enableAdminSecurity true $creds2
 
-# ----- Augment Decision Server Cluster ----------
+# ----- Augment Decision Server  ----------
 echo "Augmenting $dmgrProfileName  for decisionserver, log: $WAS_HOME/logs/manageprofiles/Dmgr01_augment.log"
 $WAS_HOME/bin/manageprofiles.sh -augment -profileName $dmgrProfileName -templatePath $WAS_HOME/profileTemplates/odm/decisionserver/management -odmHome $ODM_HOME
 
