@@ -1,45 +1,31 @@
 #!/bin/bash
 #
-# createODMclusterWAS.sh <version> <remoteHostname> 
+# createODMclusterWAS.sh <remoteHostname> 
 #
-# version = {8110, 81051}
 # remoteHostname = hostname (or IP) of remote Node02
 # --------------------------------
 
 export localOnly
 
 if [ -z "$1" ] ; then
- echo "usage: createODMclusterWAS.sh <version> <remoteHostname>"
- echo " version={8110, 81051} "
- exit 
-elif [ -z "$2" ] ; then
- echo "cluster requires Node02 remote hostname" 
- echo "usage: createODMclusterWAS.sh <version> <remoteHostname>"
- echo " version={8110, 81051} "
- exit
- # localOnly=true
+ localOnly=true
+ echo "only local cluster cluster member will created" 
 else
-  remoteHostName=$2
+  remoteHostName=$1
   remoteHost=$(ssh $remoteHostName hostname)
   remoteHostIP=$(ssh $remoteHostName hostname -i)
   if [ "$remoteHost" = "$remoteHostName" ] ||  [ "$remoteHostIP" = "$remoteHostName" ]  ; then
    echo "remote cluster member will also be created on hostname $remoteHostName"
    localOnly=false
- else
-  echo "cannot connect to $remoteHostName "
-  localOnly=true
-  exit
- fi
+  else
+   echo "cannot connect to $remoteHostName "
+   exit
+  fi
 fi
  
-export ver=$1
-
-# if   [ $HOSTNAME == "odm1" ] ;  then   ver="8110"
-# elif [ $HOSTNAME == "odm"  ] ;  then   ver="81051" ; fi
-
-# paths 
+# paths/vars 
 export WAS_HOME=/opt/IBM/WAS9/AppServer
-export ODM_HOME=/opt/IBM/ODM$ver
+export ODM_HOME=/opt/IBM/ODM8111
 export WAS_PROFILE=$WAS_HOME/profiles
 export dmgrProfileName=Dmgr01
 export node01ProfileName=ODMMachine01
@@ -57,121 +43,21 @@ creds2="-adminUserName admin -adminPassword admin"
 DSClusterPropfile=./ODMDecisionServerCluster.properties
 DCClusterPropfile=./ODMDecisionCenterCluster.properties
 
-function parseDSpropertiesFile()
-{
- resClusterName=$(grep cluster.name $DSClusterPropfile | gawk -F= '{ print $2 }')
- resdbType=$(grep database.type $DSClusterPropfile | gawk -F= '{ print $2 }')
- resdbUser=$(grep database.user $DSClusterPropfile | gawk -F= '{ print $2 }')
- resdbPassword=$(grep database.password $DSClusterPropfile | gawk -F= '{ print $2 }')
- resdbName=$(grep database.name $DSClusterPropfile | gawk -F= '{ print $2 }')
- resdbHost=$(grep database.hostname $DSClusterPropfile | gawk -F= '{ print $2 }')
- resNode1=$(grep cluster.member.nodes  $DSClusterPropfile | gawk -F= '{ print $2 }' | gawk -F, '{ print $1 }' )
- resNode2=$(grep cluster.member.nodes  $DSClusterPropfile | gawk -F= '{ print $2 }' | gawk -F, '{ print $2 }' )
-}
-
-function parseDCpropertiesFile()
-{
- dcClusterName=$(grep cluster.name $DCClusterPropfile | gawk -F= '{ print $2 }')  
- dcdbType=$(grep database.type $DCClusterPropfile | gawk -F= '{ print $2 }')
- dcdbUser=$(grep database.user $DCClusterPropfile | gawk -F= '{ print $2 }')
- dcdbPassword=$(grep database.password $DCClusterPropfile | gawk -F= '{ print $2 }')
- dcdbName=$(grep database.name $DCClusterPropfile | gawk -F= '{ print $2 }')
- dcdbHost=$(grep database.hostname $DCClusterPropfile | gawk -F= '{ print $2 }')
- dcNode1=$(grep cluster.member.nodes  $DCClusterPropfile | gawk -F= '{ print $2 }' | gawk -F, '{ print $1 }' )
- dcNode2=$(grep cluster.member.nodes  $DCClusterPropfile | gawk -F= '{ print $2 }' | gawk -F, '{ print $2 }' )
-}
-
-function validateDB()
-{
- if [ -f $DSClusterPropfile ] ; then parseDSpropertiesFile ; else echo "$DSClusterPropfile not found, aborting" ; exit  ; fi
- if [ -f $DCClusterPropfile ] ; then parseDCpropertiesFile ; else echo "$DCClusterPropfile not found, aborting" ; exit  ; fi
- 
- if [ $dcdbName ] ; then
-  source ~db2inst1/.bashrc
-  db2start
-  if [ $dcdbType = "DB2" ] ; then
-    dcdb=$(db2 connect to $dcdbName user $dcdbUser using $dcdbPassword  | grep -w DCDB)
-    db2 disconnect all
-  else
-   echo "only DB2 is currently supported" 
-  fi 
- fi
- if [ $resdbName ] ; then
-   resdb=$(db2 connect to $resdbName user $resdbUser using $resdbPassword  | grep -w RESDB)
-   db2 disconnect all;
- fi
- 
- if [[ ! $dcdb ]] ; then
-  echo "cannot connect to $dcdbName, aborting."
-  exit 
- fi
- if [[ ! $resdb ]] ; then
-  echo "cannot connect to $resdbName, aborting." 
-  exit
- fi
-
-}
-
-function deleteLocalProfiles()
-{
- echo "Deleting local profiles and clusters ... "
- $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry
- echo "Deleting profileName: $node01ProfileName ... "
- $WAS_HOME/bin/manageprofiles.sh -delete -profileName $node01ProfileName
- echo "Deleting profileName:  $dmgrProfileName... "
- $WAS_HOME/bin/manageprofiles.sh -delete -profileName $dmgrProfileName
- echo "running cmd: $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry"
- $WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry
- echo "removing folder $WAS_NODE01  $WAS_DMGR01"
- rm -rf $WAS_NODE01 
- rm -rf $WAS_DMGR01
-}
-
-function deleteRemoteProfiles()
-{
-if [ $localOnly == "false" ] ; then
- echo "Deleting remote profile on host: $remoteHostName... "
- cmd="$WAS_HOME/bin/manageprofiles.sh -delete -profileName $node02ProfileName"
- echo "Running cmd: ssh $remoteHostName $cmd" 
- ssh $remoteHostName $cmd 
-
- cmd="$WAS_HOME/bin/manageprofiles.sh -validateAndUpdateRegistry"
- echo "Running cmd: ssh $remoteHostName $cmd" 
- ssh $remoteHostName $cmd
-
- cmd="rm -rf $WAS_NODE02"
- echo "Running cmd: ssh $remoteHostName $cmd" 
- ssh $remoteHostName $cmd
- echo "Completed removal of remote profile $node02ProfileName  on host: $remoteHostName... "
-fi
-}
-
-function deleteExistingProfiles()
-{
- manageODMclusterWAS9.sh  stop
- deleteLocalProfiles
- deleteRemoteProfiles
-}
-
 #----- main ----------
-#
- validateDB
- deleteExistingProfiles
  
-# uncomment next 2 lines for WAS 855
-# $WAS_HOME/bin/managesdk.sh    -setCommandDefault    -sdkname 1.8_64_bundled
-# $WAS_HOME/bin/managesdk.sh    -setNewProfileDefault -sdkname 1.8_64_bundled
-
 # increase JVM Max heap for WAS cli scripts or augment will cause OutOfMemory exception
 sed -i "s/-Xms256m -Xmx256m -Xquickstart/-Xms245m -Xmx4096m -Xquickstart/g" $WAS_HOME/bin/wsadmin.sh
 sed -i "s/-Xms256m -Xmx256m -Xj9/-Xms256m -Xmx4096m -Xj9/g" $WAS_HOME/bin/launchWsadminListener.sh
 
+# ----- Create WAS Dmgr Profile ----------
 echo "Creating $dmgrProfileName, log: $WAS_HOME/logs/manageprofiles/Dmgr01_create.log"
 $WAS_HOME/bin/manageprofiles.sh -create -profileName $dmgrProfileName -profilePath $WAS_DMGR01  -templatePath $WAS_HOME/profileTemplates/management -enableAdminSecurity true $creds2
 
+# ----- Augment Decision Server Cluster ----------
 echo "Augmenting $dmgrProfileName  for decisionserver, log: $WAS_HOME/logs/manageprofiles/Dmgr01_augment.log"
 $WAS_HOME/bin/manageprofiles.sh -augment -profileName $dmgrProfileName -templatePath $WAS_HOME/profileTemplates/odm/decisionserver/management -odmHome $ODM_HOME
 
+# ----- Augment Decision Center  ----------
 echo "Augmenting $dmgrProfileName for decisioncenter, log: $WAS_HOME/logs/manageprofiles/Dmgr01_augment.log"
 $WAS_HOME/bin/manageprofiles.sh -augment -profileName $dmgrProfileName -templatePath $WAS_HOME/profileTemplates/odm/decisioncenter/management -odmHome $ODM_HOME
 
@@ -197,10 +83,10 @@ if [ $localOnly == "false" ] ; then
  ssh $remoteHostName $cmd
 fi
  
+# ----- Create Decision Server Cluster ---------- 
 echo "Creating $resClusterName  logs: $WAS_DMGR01/logs/odm"
 $WAS_DMGR01/bin/createODMDecisionServerCluster.sh -clusterPropertiesFile $DSClusterPropfile $creds1
 
+# ----- Create Decision Center Cluster ----------
 echo "Creating $dcClusterName, logs: $WAS_DMGR01/logs/odm"
 $WAS_DMGR01/bin/createODMDecisionCenterCluster.sh -clusterPropertiesFile $DCClusterPropfile $creds1 
-
-manageODMclusterWAS9.sh start 
