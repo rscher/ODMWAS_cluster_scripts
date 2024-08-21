@@ -1,15 +1,11 @@
 #!/bin/bash
-# 
-# Desc: Automates procedure to create  2-node WAS ND ODM DC and DS Cluster
-#  ref:   ibm.com/docs/en/odm/8.11.0?topic=server-configuring-clustered-environment
-# 
+#
 # createODMclusterWAS.sh <version> <remoteHostname> 
 #
 # version = {8110, 81051}
 # remoteHostname = hostname (or IP) of remote Node02
 # --------------------------------
 
-export SOAPport=8879
 export localOnly
 
 if [ -z "$1" ] ; then
@@ -38,6 +34,9 @@ fi
  
 export ver=$1
 
+# if   [ $HOSTNAME == "odm1" ] ;  then   ver="8110"
+# elif [ $HOSTNAME == "odm"  ] ;  then   ver="81051" ; fi
+
 # paths 
 export WAS_HOME=/opt/IBM/WAS9/AppServer
 export ODM_HOME=/opt/IBM/ODM$ver
@@ -49,6 +48,7 @@ export WAS_DMGR01=$WAS_PROFILE/$dmgrProfileName
 export WAS_NODE01=$WAS_PROFILE/$node01ProfileName
 export WAS_NODE02=$WAS_PROFILE/$node02ProfileName
 
+SOAPport=8879 
 creds="-username admin -password admin"
 creds1="-adminUsername admin -adminPassword admin"
 creds2="-adminUserName admin -adminPassword admin"
@@ -83,12 +83,12 @@ function parseDCpropertiesFile()
 
 function validateDB()
 {
-#  if [ -f $DSClusterPropfile ] ; then parseDSpropertiesFile ; else echo "$DSClusterPropfile not found, aborting" ; exit  ; fi
+ if [ -f $DSClusterPropfile ] ; then parseDSpropertiesFile ; else echo "$DSClusterPropfile not found, aborting" ; exit  ; fi
  if [ -f $DCClusterPropfile ] ; then parseDCpropertiesFile ; else echo "$DCClusterPropfile not found, aborting" ; exit  ; fi
-
+ 
  if [ $dcdbName ] ; then
- #  source ~db2inst1/.bashrc
- #  db2start
+  source ~db2inst1/.bashrc
+  db2start
   if [ $dcdbType = "DB2" ] ; then
     dcdb=$(db2 connect to $dcdbName user $dcdbUser using $dcdbPassword  | grep -w DCDB)
     db2 disconnect all
@@ -105,10 +105,10 @@ function validateDB()
   echo "cannot connect to $dcdbName, aborting."
   exit 
  fi
- # if [[ ! $resdb ]] ; then
- # echo "cannot connect to $resdbName, aborting." 
- # exit
- # fi
+ if [[ ! $resdb ]] ; then
+  echo "cannot connect to $resdbName, aborting." 
+  exit
+ fi
 
 }
 
@@ -148,7 +148,7 @@ fi
 
 function deleteExistingProfiles()
 {
- manageODMclusterWAS9.sh  stop force
+ manageODMclusterWAS9.sh  stop
  deleteLocalProfiles
  deleteRemoteProfiles
 }
@@ -169,8 +169,8 @@ sed -i "s/-Xms256m -Xmx256m -Xj9/-Xms256m -Xmx4096m -Xj9/g" $WAS_HOME/bin/launch
 echo "Creating $dmgrProfileName, log: $WAS_HOME/logs/manageprofiles/Dmgr01_create.log"
 $WAS_HOME/bin/manageprofiles.sh -create -profileName $dmgrProfileName -profilePath $WAS_DMGR01  -templatePath $WAS_HOME/profileTemplates/management -enableAdminSecurity true $creds2
 
-# echo "Augmenting $dmgrProfileName  for decisionserver, log: $WAS_HOME/logs/manageprofiles/Dmgr01_augment.log"
-# $WAS_HOME/bin/manageprofiles.sh -augment -profileName $dmgrProfileName -templatePath $WAS_HOME/profileTemplates/odm/decisionserver/management -odmHome $ODM_HOME
+echo "Augmenting $dmgrProfileName  for decisionserver, log: $WAS_HOME/logs/manageprofiles/Dmgr01_augment.log"
+$WAS_HOME/bin/manageprofiles.sh -augment -profileName $dmgrProfileName -templatePath $WAS_HOME/profileTemplates/odm/decisionserver/management -odmHome $ODM_HOME
 
 echo "Augmenting $dmgrProfileName for decisioncenter, log: $WAS_HOME/logs/manageprofiles/Dmgr01_augment.log"
 $WAS_HOME/bin/manageprofiles.sh -augment -profileName $dmgrProfileName -templatePath $WAS_HOME/profileTemplates/odm/decisioncenter/management -odmHome $ODM_HOME
@@ -197,8 +197,8 @@ if [ $localOnly == "false" ] ; then
  ssh $remoteHostName $cmd
 fi
  
-# echo "Creating $resClusterName  logs: $WAS_DMGR01/logs/odm"
-# $WAS_DMGR01/bin/createODMDecisionServerCluster.sh -clusterPropertiesFile $DSClusterPropfile $creds1
+echo "Creating $resClusterName  logs: $WAS_DMGR01/logs/odm"
+$WAS_DMGR01/bin/createODMDecisionServerCluster.sh -clusterPropertiesFile $DSClusterPropfile $creds1
 
 echo "Creating $dcClusterName, logs: $WAS_DMGR01/logs/odm"
 $WAS_DMGR01/bin/createODMDecisionCenterCluster.sh -clusterPropertiesFile $DCClusterPropfile $creds1 
