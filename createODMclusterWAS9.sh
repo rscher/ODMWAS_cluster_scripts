@@ -46,7 +46,7 @@ DCClusterPropfile=./ODMDecisionCenterCluster.properties
 #----- main ----------
  
 # increase JVM Max heap for WAS cli scripts or augment will cause OutOfMemory exception
-sed -i "s/-Xms256m -Xmx256m -Xquickstart/-Xms245m -Xmx4096m -Xquickstart/g" $WAS_HOME/bin/wsadmin.sh
+sed -i "s/-Xms256m -Xmx256m -Xquickstart/-Xms256m -Xmx4096m -Xquickstart/g" $WAS_HOME/bin/wsadmin.sh
 sed -i "s/-Xms256m -Xmx256m -Xj9/-Xms256m -Xmx4096m -Xj9/g" $WAS_HOME/bin/launchWsadminListener.sh
 
 # ----- Create WAS Dmgr Profile ----------
