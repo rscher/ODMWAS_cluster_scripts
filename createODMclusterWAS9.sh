@@ -32,7 +32,7 @@ export node01ProfileName=ODMMachine01
 export node02ProfileName=ODMMachine02
 export WAS_DMGR01=$WAS_PROFILE/$dmgrProfileName
 export WAS_NODE01=$WAS_PROFILE/$node01ProfileName
-export WAS_NODE02=$WAS_PROFILE/$node02ProfileName
+export WAS_NODE02=$WAS_PROFILE/$node02ProfileName 
 
 SOAPport=8879 
 creds="-username admin -password admin"
@@ -42,6 +42,9 @@ creds2="-adminUserName admin -adminPassword admin"
 # Variables used must match cluster properties files and topology
 DSClusterPropfile=./ODMDecisionServerCluster.properties
 DCClusterPropfile=./ODMDecisionCenterCluster.properties
+
+export resNode1=$(grep cluster.member.nodes  $DSClusterPropfile | gawk -F= '{ print $2 }' | gawk -F, '{ print $1 }' )
+export resNode2=$(grep cluster.member.nodes  $DSClusterPropfile | gawk -F= '{ print $2 }' | gawk -F, '{ print $2 }' )
 
 #----- main ----------
  
